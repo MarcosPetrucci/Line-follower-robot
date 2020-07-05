@@ -95,12 +95,12 @@ class PID{
     uint16_t posicao;
     uint16_t posiAnt;
     double kP, kI, kD;      
-    double P, I, D;
+    double P = 0, I = 0, D = 0;
     double pid;
 
     //Dada a propriedade do array de sensores, 2000 é o ponto de equilíbrio perfeito
     double setPoint = 2000;
-    long tempoAnt;  
+    long tempoAnt = 0;  
 
   public:
 
