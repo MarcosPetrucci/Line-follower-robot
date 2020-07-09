@@ -11,8 +11,8 @@ const int logic1m2 = 11;
 const int logic2m2 = 13;
 
 //Pinos que controlam a velocidade de cada motor
-const int enable1 = 26;
-const int enable2 = 25;
+const int enable1 = 25;
+const int enable2 = 26;
 const int canal1 = 0; //Esses canais são necessários para o funcionamento da função
 const int canal2 = 1;
 const int freq = 30000; //Frequência usada pela referência
@@ -26,8 +26,8 @@ const int VBASE_RETA = 200;
 int velo1, velo2, veloBASE = 0;
 
 // ---- Sensores Laterais --- //
-const int dir = 14;
-const int esq = 15;
+const int dir = 15;
+const int esq = 14;
 const int CONTRASTE = 800; //Dado que serão um único sensor analógico, a leitura varia de 0 - 1023. Devemos definir um valor alto para o contraste ser preciso
 
 
