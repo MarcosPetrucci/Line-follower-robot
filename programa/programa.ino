@@ -5,14 +5,17 @@
 // ---- Sinal PWM do motor ---- //
 
 //Pinos para controle lógicco do motor 1 e 2
-const int logic1m1 = 10;
-const int logic2m1 = 11;
-const int logic1m2 = 12;
+const int logic1m1 = 9;
+const int logic2m1 = 10;
+const int logic1m2 = 11;
 const int logic2m2 = 13;
 
 //Pinos que controlam a velocidade de cada motor
-const int velocidade1 = 1;
-const int velocidade2 = 2;
+const int enable1 = 26;
+const int enable2 = 25;
+const int canal1 = 0; //Esses canais são necessários para o funcionamento da função
+const int canal2 = 1;
+const int freq = 30000; //Frequência usada pela referência
 
 const int VBASE_CURVA = 100; //Velocidade base do motor, na qual adicionamos o ajuste PID
 const int VBASE_RETA = 200; 
@@ -23,8 +26,8 @@ const int VBASE_RETA = 200;
 int velo1, velo2, veloBASE = 0;
 
 // ---- Sensores Laterais --- //
-const int dir = 8;
-const int esq = 9;
+const int dir = 14;
+const int esq = 15;
 const int CONTRASTE = 800; //Dado que serão um único sensor analógico, a leitura varia de 0 - 1023. Devemos definir um valor alto para o contraste ser preciso
 
 
@@ -78,6 +81,7 @@ double PID_reta[3] = {0, 0, 0};
 double PID_curva[3] = {0, 0, 0};
 
 //Variaveis de uso na loop
+int flag_leitura = 0; //Flag que indica se estamos sobre uma faixa ou não
 int direita; //Armazena a leitura atual da direita
 int esquerda; //Armazena a leitura atual da esquerda
 int parar = 0; //Aparentemente não há um jeito de desligar o arduino via código, por isso se esta variável for 1 o robô não fará nada
@@ -123,11 +127,11 @@ class PID{
   double getPID()
   {
     //(for a white line, use readLineWhite() instead)    
-    uint16_t posicao = qtr.readLineBlack(valorSensores); //Le os sensores e retorna um valor de 0 até 4000
+    uint16_t posicao = qtr.readLineWhite(valorSensores); //Le os sensores e retorna um valor de 0 até 4000
     
     // Implementação PID
     ajuste = setPoint - posicao; //Dessa subtração, sabemos que o erro máximo é ?????? (não temos noção qual será o ajuste min-max, pois ele será a soma de P+I+D)
-    float deltaTime = (millis() - tempoAnt) / 1000.0;
+    float deltaTime = (millis() - tempoAnt) / 1000.0;   //Ficar esperto com este deltaTime
     tempoAnt = millis();
     
     //P
@@ -152,6 +156,7 @@ PID leitor;
 
 void setup() 
 {
+
   // --- Setando pinos ---//
   pinMode(front1, INPUT);
   pinMode(front2, INPUT);
@@ -172,17 +177,21 @@ void setup()
   pinMode(logic2m1, OUTPUT);
   pinMode(logic1m2, OUTPUT);
   pinMode(logic2m2, OUTPUT);
-  pinMode(velocidade1, OUTPUT);
-  pinMode(velocidade2, OUTPUT);
-  delay(100);
-  digitalWrite(logic1m1, HIGH); //Já deixar setado apenas 1 sentido de rotação para os motores
+   // Configura o PWM
+  ledcSetup(canal1, freq, 8); // 8 bits de reslução 0 - 255
+  ledcSetup(canal2, freq, 8); // 8 bits de reslução 0 - 255
+  
+  // Linka o "canal" na porta da ESP
+  ledcAttachPin(enable1, canal1);
+  ledcAttachPin(enable2, canal2);
+ 
+  digitalWrite(logic1m1, HIGH); //Já deixar setado o sentido convencional de rotação
   digitalWrite(logic2m1, LOW);
   digitalWrite(logic1m2, HIGH);
   digitalWrite(logic2m2, LOW);
   
-  //analogWrite(velocidade1, 0);
-  ledcWrite(velocidade1, 0);  //ledcWrite funciona?? É a melhor alternativa? Não sabemos...
-  ledcWrite(velocidade2, 0);
+  ledcWrite(canal1, 0);  //ledcWrite funciona: https://www.youtube.com/watch?v=ZIhKmUGSpIo
+  ledcWrite(canal2, 0);
 }
 
 void loop() 
@@ -192,72 +201,93 @@ void loop()
     
   /* Evitar alocação no loop - poupa tempo */
   
-  //Inicia a volta
+  //Talvez pode ser substituido por um digitalRead - Depende do modelo de sensor
   direita = analogRead(dir); //Retornam valores analógicos na range de 0 - 1023
   esquerda = analogRead(esq);
+ 
+  if(flag_leitura && esquerda < CONTRASTE - 100 && direita < CONTRASTE - 100) //O -100 vem para dar uma boa margem de erro (Não sei se ajuda muito)
+    flag_leitura = 0;
+
+  if(!flag_leitura)
+  {
+    if(esquerda >= CONTRASTE)
+    {
+      flag_leitura = 1;
+   
+      if(faixa_esq[indc_esq] == RETA) //Estamos em uma reta
+      {
+        leitor.setKPID(RETA);
+        veloBASE = VBASE_RETA;
+      }
+      else //Estamos em uma curva                        
+      {
+        leitor.setKPID(CURVA);
+        veloBASE = VBASE_CURVA;
+      }
   
-  //!!Problema importante: E se o programa entrar várias vezes nesses IFs ? Como filtrar? Colocar um intervalo de tempo mínimo de tolerância?
-    //  Resposta: Só com testes saberemos....
+      ajuste = leitor.getPID();
+  
+      //Dois valores BASE diferente - 1 pra reta 1 pra curva - O valor ideal só pode ser descoberto com testes.....
+      velo1 = veloBASE + ajuste;
+      velo2 = veloBASE - ajuste;
+
+      //Dar a possibilidade do motor de andar para tras
+      if(velo1 < 0)
+      {
+        //Motor quer rodar para trás
+        digitalWrite(logic1m1, LOW); 
+        digitalWrite(logic2m1, HIGH);
+        velo1 = abs(velo1);
+      }
+      else
+      { //Sempre bom re-setar
+        digitalWrite(logic1m1, HIGH); 
+        digitalWrite(logic2m1, LOW);
+      }
+
+      if(velo2 < 0)
+      {
+        //Motor quer rodar para trás
+        digitalWrite(logic1m2, LOW); 
+        digitalWrite(logic2m2, HIGH);
+        velo2 = abs(velo2);
+      }
+      else
+      {
+        digitalWrite(logic1m2, HIGH); 
+        digitalWrite(logic2m2, LOW);
+      }
+
+      if(velo1 > 255)
+        velo1 = 255;
+
+      if(velo2 > 255)
+        velo2 = 255;
+
+      ledcWrite(canal1, velo1); 
+      ledcWrite(canal2, velo2);
+              
+      indc_esq++;
+    }
     
-  if(esquerda >= CONTRASTE)
-  {
-    if(faixa_esq[indc_esq] == RETA) //Estamos em uma reta
+    //O programa DEVE testar os dois IFs, pois o vetor da direita deve estar devidamente atualizado para pararmos na hora certa
+      //Será que durante um cruzamento ele consegue computar o da direita E o da esquerda??? Só com testes....
+    if(direita >= CONTRASTE)
     {
-      leitor.setKPID(RETA);
-      veloBASE = VBASE_RETA;
-    }
-    else //Estamos em uma curva                        
-    {
-      leitor.setKPID(CURVA);
-      veloBASE = VBASE_CURVA;
-    }
-
-    ajuste = leitor.getPID();
-
-    //Dois valores BASE diferente - 1 pra reta 1 pra curva - O valor ideal só pode ser descoberto com testes.....
-    velo1 = veloBASE + ajuste;
-    velo2 = veloBASE - ajuste;
-
-    velo1 = abs(velo1);
-    velo2 = abs(velo2);
-    
-    if(velo1 > 255 && velo2 < 255)
-    {
-      ledcWrite(velocidade1, 255); 
-      ledcWrite(velocidade2, velo2);
-    }
-    else if(velo2 > 255 && velo1 < 255)
-    {
-      ledcWrite(velocidade1, velo1); 
-      ledcWrite(velocidade2, 255);
-    }
-    else if(velo1 > 255 && velo2 > 255)
-    {
-      ledcWrite(velocidade1, 255);
-      ledcWrite(velocidade2, 255);
-    }
-    else
-    {
-      ledcWrite(velocidade1, velo1); 
-      ledcWrite(velocidade2, velo2);
-    } 
-    
-    indc_esq++;
-  }
-
-  //O programa DEVE testar os dois IFs, pois o vetor da direita deve estar devidamente atualizado para pararmos na hora certa
-    //Será que durante um cruzamento ele consegue computar o da direita E o da esquerda??? Só com testes....
-  if(direita >= CONTRASTE)
-  {
-    if(faixa_esq[indc_esq] == FIM) //Chegamos ao FIM do trajeto, devemos parar!!
-    {
-      parar = 1;
+      flag_leitura = 1;
       
-      ledcWrite(velocidade1, 0); //ledcWrite funciona?? É a melhor alternativa? Não sabemos...
-      ledcWrite(velocidade2, 0);
-    }
-    
-    //Não é o fim, basta incrementar o vetor e esperar pelo fim
-    indc_dir++;
-  }  
+      if(faixa_dir[indc_dir] == FIM) //Chegamos ao FIM do trajeto, devemos parar!!
+      {
+        parar = 1;
+
+        delay(300); //Faz o robô andar só mais um pouquinho, durante 300 ms, para garantir que ficará na região de vitória!
+        
+        ledcWrite(canal1, 0); //ledcWrite funciona?? É a melhor alternativa? Não sabemos...
+        ledcWrite(canal2, 0);
+      }
+      
+      //Não é o fim, basta incrementar o vetor e esperar pelo fim
+      indc_dir++;
+    }  
+  }
 }
