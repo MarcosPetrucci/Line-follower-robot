@@ -22,12 +22,12 @@ int main(int argc, char **argv)
   int rightMotorHandle = 0;
   float vRight = 0;
   //Handles e nomes dos sensores
-  string sensorNome[3] = {"LeftSensor", "MiddleSensor", "RightSensor"};
-  int sensorHandle[3];
+  string sensorNome[5] = {"LeftSensor", "MiddleSensor", "RightSensor", "LeftSensor2", "RightSensor2"};
+  int sensorHandle[5];
 
   int res[2];
   simxUChar* image;
-  int sensorResponse[3] = {0,0,0};
+  int sensorResponse[5] = {0,0,0,0,0};
 
   //Tenta estabelecer conexao com a simulacao (nao esqueca de dar play)
   int clientID = simxStart((simxChar *)serverIP.c_str(), serverPort, true, true, 2000, 5);
@@ -50,7 +50,7 @@ int main(int argc, char **argv)
 
     
     // inicialização dos sensores (remoteApi)
-    for (int i = 0; i < 3; i++)
+    for (int i = 0; i < 5; i++)
     {
       if (simxGetObjectHandle(clientID, (const simxChar *)sensorNome[i].c_str(), (simxInt *)&sensorHandle[i], (simxInt)simx_opmode_oneshot_wait) != simx_return_ok)
       {
@@ -66,7 +66,7 @@ int main(int argc, char **argv)
     // desvio e velocidade do robô
     while (simxGetConnectionId(clientID) != -1) // enquanto a simulação estiver ativa
     {
-      for (int i = 0; i < 3; i++)
+      for (int i = 0; i < 5; i++)
       {
         if(simxGetVisionSensorImage(clientID,sensorHandle[i],res,&image,0,simx_opmode_streaming) == simx_return_ok)
         {
