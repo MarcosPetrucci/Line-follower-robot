@@ -1,0 +1,28 @@
+#IncludeRegexLine: ^[ 	]*#[ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/marcos/Downloads/SEMEAR/Seguidor-de-linha-Grupo2_SEMEAR/simulação/main.cpp
+remoteApi/extApi.h
+/home/marcos/Downloads/SEMEAR/Seguidor-de-linha-Grupo2_SEMEAR/simulação/remoteApi/extApi.h
+iostream
+-
+string.h
+-
+
+/home/marcos/Downloads/SEMEAR/Seguidor-de-linha-Grupo2_SEMEAR/simulação/remoteApi/extApi.h
+extApiPlatform.h
+/home/marcos/Downloads/SEMEAR/Seguidor-de-linha-Grupo2_SEMEAR/simulação/remoteApi/extApiPlatform.h
+v_repConst.h
+/home/marcos/Downloads/SEMEAR/Seguidor-de-linha-Grupo2_SEMEAR/simulação/remoteApi/v_repConst.h
+
+/home/marcos/Downloads/SEMEAR/Seguidor-de-linha-Grupo2_SEMEAR/simulação/remoteApi/extApiPlatform.h
+stdint.h
+-
+
+include/v_repConst.h
+

@@ -1,0 +1,7 @@
+/home/marcos/Downloads/SEMEAR/Seguidor-de-linha-Grupo2_SEMEAR/simulação/CMakeFiles/install.dir
+/home/marcos/Downloads/SEMEAR/Seguidor-de-linha-Grupo2_SEMEAR/simulação/CMakeFiles/list_install_components.dir
+/home/marcos/Downloads/SEMEAR/Seguidor-de-linha-Grupo2_SEMEAR/simulação/CMakeFiles/rebuild_cache.dir
+/home/marcos/Downloads/SEMEAR/Seguidor-de-linha-Grupo2_SEMEAR/simulação/CMakeFiles/cppremoteapi.dir
+/home/marcos/Downloads/SEMEAR/Seguidor-de-linha-Grupo2_SEMEAR/simulação/CMakeFiles/install/strip.dir
+/home/marcos/Downloads/SEMEAR/Seguidor-de-linha-Grupo2_SEMEAR/simulação/CMakeFiles/install/local.dir
+/home/marcos/Downloads/SEMEAR/Seguidor-de-linha-Grupo2_SEMEAR/simulação/CMakeFiles/edit_cache.dir
