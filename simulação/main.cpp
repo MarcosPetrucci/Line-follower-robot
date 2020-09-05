@@ -11,8 +11,81 @@ extern "C"
 
 using namespace std;
 
+FILE *arq, *arq2;
+
+// Classe PID
+class PID{
+  
+  private:
+    double ajuste;
+    uint16_t posicao;
+    uint16_t posiAnt;
+    double kP, kI, kD;      
+    double P = 0,D = 0,I = 0;
+    double pid;
+    double deltaTime;
+    double soma;
+
+    //Dada a propriedade do array de sensores, 2000 é o ponto de equilíbrio perfeito
+    double setPoint = 2000;
+    double tempoAnt = 0;  
+
+  public:
+  
+  PID(double Pi, double Ii, double De)
+  {
+    kP = Pi;
+    kI = Ii;
+    kD = De;
+  }
+
+  double getPID(int v[4])
+  {
+    //(for a white line, use readLineWhite() instead)
+    if(v[0] + v[1] + v[2] + v[3] + v[4] == 0)
+      v[0] = 1;
+    
+    uint16_t posicao = (0*v[0] + 1000*v[1] + 2000*v[2] + 3000*v[3] + 4000*v[4]) /(v[0] + v[1] + v[2] + v[3] + v[4]);
+
+    
+    // Implementação PID
+    ajuste = setPoint - posicao; //Dessa subtração, sabemos que o erro máximo é ?????? (não temos noção qual será o ajuste min-max, pois ele será a soma de P+I+D)
+    
+    deltaTime = (double) (clock() - tempoAnt) * 1000 / CLOCKS_PER_SEC;   //Ficar esperto com este deltaTime
+    tempoAnt = clock();    
+    
+    soma +=deltaTime;
+    //P
+    P = ajuste * kP;
+    
+    //I
+    I = I + (ajuste * kI) * deltaTime;
+    
+    //D
+    D = (posiAnt - posicao) * kD / deltaTime;
+    posiAnt = posicao;
+    
+    // Soma tudo
+    double val = P + I + D;
+        
+
+
+    fprintf(arq, "%.6f,\n", ajuste);
+    fprintf(arq2, "%.6f\n", soma);
+    return val;
+  }
+};
+
+PID pid(0.0011, 0, 0);
+//PID pid(0.00066, 0.019, 0.00000825);
+
 int main(int argc, char **argv)
 {
+  
+
+  arq = fopen("erros.txt", "a");
+  arq2 = fopen("somas.txt", "a");
+  
   //Variaveis para conexao do servidor
   string serverIP = "127.0.0.1";
   int serverPort = 19999;
@@ -20,7 +93,7 @@ int main(int argc, char **argv)
   int leftMotorHandle = 0;
   float vLeft = 0;
   int rightMotorHandle = 0;
-  float vRight = 0;
+  double vRight = 0;
   //Handles e nomes dos sensores
   string sensorNome[5] = {"LeftSensor", "MiddleSensor", "RightSensor", "LeftSensor2", "RightSensor2"};
   int sensorHandle[5];
@@ -31,6 +104,12 @@ int main(int argc, char **argv)
 
   //Tenta estabelecer conexao com a simulacao (nao esqueca de dar play)
   int clientID = simxStart((simxChar *)serverIP.c_str(), serverPort, true, true, 2000, 5);
+
+  //Variáveis do seguidor
+  int v[4];
+  double veloBASE = 7;
+  double ajuste;
+
 
   //Se a conexao e estabelicida, sera retornado um valo diferente de 0
   if (clientID != -1)
@@ -77,15 +156,36 @@ int main(int argc, char **argv)
           }
           sum = sum/(res[0]*res[0]); //Média dos valores preto-branco dos pixels da imagem
                                      //Podemos simular esse valor como um sensor IR
+          v[i] = sum;
+          
           if(sum > 60)
             sensorResponse[i] = 1;
           else
             sensorResponse[i] = 0;
           
-          printf("Sensor[%i] : %d \n",i,sensorResponse[i]);
+          printf("Sensor[%i] : %d \n", i,sensorResponse[i]);
+
+    
         }
       }
-      char aux;
+      //Com as leituras feitas
+      ajuste = pid.getPID(v);
+
+      //Dois valores BASE diferente - 1 pra reta 1 pra curva - O valor ideal só pode ser descoberto com testes.....
+      vLeft = veloBASE - ajuste;
+      vRight = veloBASE + ajuste;
+
+      printf("\nTemos v1: %f e v2: %f\n", vLeft, vRight);
+
+      //Não dar a possibilidade do motor de andar para tras
+
+      /*if(vLeft > 5)
+        vLeft = 5;
+
+      if(vRight > 5)
+        vRight = 5;*/
+
+        /*char aux;
       scanf("%c",&aux);
       if(aux == 'w')
       {
@@ -106,7 +206,7 @@ int main(int argc, char **argv)
       {
         vLeft = -2;
         vRight = -2;
-      }
+      }*/
       
       // atualiza velocidades dos motores
       simxSetJointTargetVelocity(clientID, leftMotorHandle, (simxFloat)vLeft, simx_opmode_streaming);
@@ -114,6 +214,7 @@ int main(int argc, char **argv)
       
       extApi_sleepMs(5);
     }
+    fclose(arq);
     simxFinish(clientID); // fechando conexao com o servidor
     cout << "Conexao fechada!" << std::endl;
   }
