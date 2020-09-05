@@ -75,7 +75,8 @@ int main(int argc, char **argv)
           {
             sum += (int) image[i];
           }
-          sum = sum/(res[0]*res[0]);
+          sum = sum/(res[0]*res[0]); //Média dos valores preto-branco dos pixels da imagem
+                                     //Podemos simular esse valor como um sensor IR
           if(sum > 60)
             sensorResponse[i] = 1;
           else
