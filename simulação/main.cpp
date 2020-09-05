@@ -11,8 +11,6 @@ extern "C"
 
 using namespace std;
 
-FILE *arq, *arq2;
-
 // Classe PID
 class PID{
   
@@ -26,8 +24,8 @@ class PID{
     double deltaTime;
     double soma;
 
-    //Dada a propriedade do array de sensores, 2000 é o ponto de equilíbrio perfeito
-    double setPoint = 2000;
+    //Dada a propriedade do array de sensores, 2500 é o ponto de equilíbrio perfeito
+    double setPoint = 2500;
     double tempoAnt = 0;  
 
   public:
@@ -41,13 +39,11 @@ class PID{
 
   double getPID(int v[4])
   {
-    //(for a white line, use readLineWhite() instead)
     if(v[0] + v[1] + v[2] + v[3] + v[4] == 0)
       v[0] = 1;
     
-    uint16_t posicao = (0*v[0] + 1000*v[1] + 2000*v[2] + 3000*v[3] + 4000*v[4]) /(v[0] + v[1] + v[2] + v[3] + v[4]);
+    uint16_t posicao = (1000*v[0] + 2000*v[1] + 3000*v[2] + 4000*v[3] + 5000*v[4]) /(v[0] + v[1] + v[2] + v[3] + v[4]);
 
-    
     // Implementação PID
     ajuste = setPoint - posicao; //Dessa subtração, sabemos que o erro máximo é ?????? (não temos noção qual será o ajuste min-max, pois ele será a soma de P+I+D)
     
@@ -67,25 +63,14 @@ class PID{
     
     // Soma tudo
     double val = P + I + D;
-        
-
-
-    fprintf(arq, "%.6f,\n", ajuste);
-    fprintf(arq2, "%.6f\n", soma);
     return val;
   }
 };
 
-PID pid(0.0011, 0, 0);
-//PID pid(0.00066, 0.019, 0.00000825);
+PID pid(0.0011, 0.000003, 0.000008); 
 
 int main(int argc, char **argv)
 {
-  
-
-  arq = fopen("erros.txt", "a");
-  arq2 = fopen("somas.txt", "a");
-  
   //Variaveis para conexao do servidor
   string serverIP = "127.0.0.1";
   int serverPort = 19999;
@@ -107,7 +92,7 @@ int main(int argc, char **argv)
 
   //Variáveis do seguidor
   int v[4];
-  double veloBASE = 7;
+  double veloBASE = 10;
   double ajuste;
 
 
@@ -176,37 +161,6 @@ int main(int argc, char **argv)
       vRight = veloBASE + ajuste;
 
       printf("\nTemos v1: %f e v2: %f\n", vLeft, vRight);
-
-      //Não dar a possibilidade do motor de andar para tras
-
-      /*if(vLeft > 5)
-        vLeft = 5;
-
-      if(vRight > 5)
-        vRight = 5;*/
-
-        /*char aux;
-      scanf("%c",&aux);
-      if(aux == 'w')
-      {
-        vLeft = 2;
-        vRight = 2;
-      }
-      else if (aux == 'd')
-      {
-        vLeft = 0;
-        vRight = 2;
-      }
-      else if (aux == 'a')
-      {
-        vLeft = 2;
-        vRight = 0;
-      }
-      else if (aux == 's')
-      {
-        vLeft = -2;
-        vRight = -2;
-      }*/
       
       // atualiza velocidades dos motores
       simxSetJointTargetVelocity(clientID, leftMotorHandle, (simxFloat)vLeft, simx_opmode_streaming);
@@ -214,7 +168,6 @@ int main(int argc, char **argv)
       
       extApi_sleepMs(5);
     }
-    fclose(arq);
     simxFinish(clientID); // fechando conexao com o servidor
     cout << "Conexao fechada!" << std::endl;
   }
